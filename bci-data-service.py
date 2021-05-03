@@ -124,7 +124,6 @@ class Subcribe():
 			td[key] = keepers
 			vals = keepers.values()
 			self.time_slice_averages[key] = sum(vals) / len(vals)
-
 		event["last_30s"] = self.time_slice_averages
 
 
@@ -179,9 +178,9 @@ class Subcribe():
 				for y in range(len(my_keys)):
 					k = my_keys[y]
 					vals.append(str(row[k]))
-				# print(','.join(vals))
-			print(json.dumps(event_data, indent=4))
-			# send_kinesis(kinesis_client, kinesis_stream_name, kinesis_shard_count, event_data) # send it!
+				print(','.join(vals))
+			# print(json.dumps(event_data, indent=4))
+			send_kinesis(kinesis_client, kinesis_stream_name, kinesis_shard_count, event_data) # send it!
 
 		self.objects = self.create_records_structure()
 		self.count = 0
@@ -296,7 +295,7 @@ class Subcribe():
 					event = None
 			elif stream_name == 'fac':
 				if self.is_facial_data_redundant(event):
-					event = None			
+					event = None
 		return event, sid
 
 
