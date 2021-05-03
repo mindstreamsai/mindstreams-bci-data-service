@@ -13,7 +13,6 @@ kinesis_client = boto3.client('kinesis', 'us-east-2')
 kinesis_stream_name = "mindstreams-ingestion"
 kinesis_shard_count = 1
 
-
 # function for sending data to Kinesis at the absolute maximum throughput
 def send_kinesis(client, stream_name, shard_count, payload):
 	kinesisRecords = [] # empty list to store data
@@ -93,6 +92,40 @@ class Subcribe():
 		}
 		self.c = Cortex(user, debug_mode=False)
 		self.c.do_prepare_steps()
+		self.time_slice = 0
+		self.time_data = {
+			'engagement': {},
+			'excitement': {},
+			'stress': {},
+			'relaxation': {},
+			'interest': {},
+			'focus': {}
+		}
+		self.time_slice_averages = {}
+
+
+	def add_cognitive_data_to_time_aggregation(self, event):
+		right_now = time.time()
+		current_time = str(right_now * 1000)
+		td = self.time_data
+		for key in td.keys():
+			new_value = event.get(key, None)
+			if new_value:
+				td[key][current_time] = new_value
+
+		self.time_slice_averages = {}
+		for key in td.keys():
+			ds = td[key]
+			keepers = {}
+			for t in ds.keys():
+				last_time = float(t) / 1000
+				if (right_now - last_time) <= 30:
+					keepers[t] = ds[t]
+			td[key] = keepers
+			vals = keepers.values()
+			self.time_slice_averages[key] = sum(vals) / len(vals)
+
+		event["last_30s"] = self.time_slice_averages
 
 
 	def prepare_metadata(self):
@@ -136,7 +169,7 @@ class Subcribe():
 		return o
 
 	def publish_records(self):
-		my_keys = ['engagement', 'excitement', 'excitementLast1Min', 'stress', 'relaxation', 'interest', 'focus']
+		my_keys = ['engagement', 'excitement', 'stress', 'relaxation', 'interest', 'focus']
 		if len(self.objects['cognitive']) > 0:
 			event_data = self.objects
 			rows = self.objects['cognitive']
@@ -146,9 +179,9 @@ class Subcribe():
 				for y in range(len(my_keys)):
 					k = my_keys[y]
 					vals.append(str(row[k]))
-				print(','.join(vals))
-			#print(json.dumps(self.objects["facial"]))
-			send_kinesis(kinesis_client, kinesis_stream_name, kinesis_shard_count, event_data) # send it!
+				# print(','.join(vals))
+			print(json.dumps(event_data, indent=4))
+			# send_kinesis(kinesis_client, kinesis_stream_name, kinesis_shard_count, event_data) # send it!
 
 		self.objects = self.create_records_structure()
 		self.count = 0
@@ -164,7 +197,7 @@ class Subcribe():
 
 	def add_event(self, event, stream_name, sid):
 		if stream_name == 'met':
-			self.objects['cognitive'].append(event)
+			self.objects['cognitive'].append(event)			
 		elif stream_name == 'eeg':
 			self.objects['eeg'].append(event)
 		elif stream_name == 'fac':
@@ -193,7 +226,8 @@ class Subcribe():
 		del event['relaxationEnabled']
 		del event['interestEnabled']
 		del event['focusEnabled']
-
+		self.add_cognitive_data_to_time_aggregation(event)
+		
 
 	def map_eeg(self, event):
 		if not event['hasMarkers']: 
@@ -249,7 +283,7 @@ class Subcribe():
 			event['ts'] = time_value
 
 			if stream_name == 'met':
-				self.map_met(event)
+				self.map_met(event)				
 			elif stream_name == 'eeg':
 				if self.is_data_sample_relevant(event):
 					self.map_eeg(event)
@@ -262,7 +296,7 @@ class Subcribe():
 					event = None
 			elif stream_name == 'fac':
 				if self.is_facial_data_redundant(event):
-					event = None
+					event = None			
 		return event, sid
 
 
@@ -289,7 +323,6 @@ class Subcribe():
 			record = json.loads(data)
 		except e as Error:
 			print(e)
-			
 		sid = None
 		stream_name = None
 
@@ -317,7 +350,7 @@ class Subcribe():
 			self.c.add_callback(self.on_data_received)		
 			self.count = 0
 			self.objects = self.create_records_structure()
-			print(','.join(['engagement', 'excitement', 'excLast1Min', 'stress', 'relaxation', 'interest', 'focus']))
+			print(','.join(['engagement', 'excitement', 'stress', 'relaxation', 'interest', 'focus']))
 			self.c.sub_request(streams)
 
 def main():
@@ -325,7 +358,7 @@ def main():
 	print(f"BCI Data Service for {user_id}")
 
 	# streams = ['met', 'fac', 'mot', 'eeg']
-	streams = ['met', 'mot', 'fac']
+	streams = ['met', 'fac']
 
 	s = Subcribe()
 	s.start(user_id, streams)
