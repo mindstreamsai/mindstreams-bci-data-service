@@ -4,6 +4,7 @@ import json
 import datetime
 import uuid
 import time
+import sys
 
 with open('./cortex_creds') as creds_file:
 	user = json.load(creds_file)
@@ -106,12 +107,22 @@ class Subcribe():
 		del metadata["performanceMetrics"]
 		del metadata["stopped"]
 		del metadata["streams"]
+		if self.c.user_id is None:
+			self.c.user_id = metadata["owner"]
+		self.c.device_id = headset["id"]
+		self.c.component_id = headset["virtualHeadsetId"] or "00000000-0000-0000-0000-000000000000"
+		del metadata["owner"]
+		del headset["id"]
+		del headset["virtualHeadsetId"]
 
 
 	def create_records_structure(self):
 		o = {
 			"id": str(uuid.uuid4()),
 			"sessionId": self.c.session_id,
+			"userId": self.c.user_id,
+			"deviceId": self.c.device_id.lower(),
+			"componentId": self.c.component_id,
 			"ts": datetime.datetime.now().isoformat(),
 			"metadata": {
 			},
@@ -124,11 +135,19 @@ class Subcribe():
 		o["metadata"] = metadata
 		return o
 
-
 	def publish_records(self):
+		my_keys = ['engagement', 'excitement', 'excitementLast1Min', 'stress', 'relaxation', 'interest', 'focus']
 		if len(self.objects['cognitive']) > 0:
 			event_data = self.objects
-			print(json.dumps(event_data))
+			rows = self.objects['cognitive']
+			for x in range(len(rows)):
+				row = rows[x]
+				vals = []
+				for y in range(len(my_keys)):
+					k = my_keys[y]
+					vals.append(str(row[k]))
+				print(','.join(vals))
+			#print(json.dumps(self.objects["facial"]))
 			send_kinesis(kinesis_client, kinesis_stream_name, kinesis_shard_count, event_data) # send it!
 
 		self.objects = self.create_records_structure()
@@ -266,7 +285,11 @@ class Subcribe():
 
 
 	def on_data_received(self, data):
-		record = json.loads(data)
+		try:
+			record = json.loads(data)
+		except e as Error:
+			print(e)
+			
 		sid = None
 		stream_name = None
 
@@ -287,17 +310,25 @@ class Subcribe():
 
 			
 
-	def start(self, streams):
+	def start(self, user_id, streams):
 		if self.c.ready_to_use:
+			self.c.user_id = user_id
 			self.prepare_metadata()
 			self.c.add_callback(self.on_data_received)		
 			self.count = 0
 			self.objects = self.create_records_structure()
+			print(','.join(['engagement', 'excitement', 'excLast1Min', 'stress', 'relaxation', 'interest', 'focus']))
 			self.c.sub_request(streams)
 
-s = Subcribe()
+def main():
+	user_id = sys.argv[1]
+	print(f"BCI Data Service for {user_id}")
 
-# streams = ['met', 'fac', 'mot', 'eeg']
-streams = ['met']
+	# streams = ['met', 'fac', 'mot', 'eeg']
+	streams = ['met', 'mot', 'fac']
 
-s.start(streams)
+	s = Subcribe()
+	s.start(user_id, streams)
+
+if __name__ == "__main__":
+    main()

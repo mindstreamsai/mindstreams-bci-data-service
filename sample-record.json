@@ -1,0 +1,46 @@
+{
+    "id": "89202703-ac12-4982-9846-9b5a9ed54100",
+    "sessionId": "e94d9ff0-f181-4c73-907e-97475b52f68c",
+    "userId": "austinbeaudreau@gmail.com",
+    "deviceId": "INSIGHT-F5BACB9D",
+    "componentId": "f5bacb9d-502b-461a-9478-105770bbeb3c",
+    "ts": "2021-05-02T10:33:52.321133",
+    "metadata": {
+        "appId": "com.chloebeaudreau.mindstreams",
+        "headset": {
+            "connectedBy": "dongle",
+            "dongle": "6ff",
+            "firmware": "931",
+            "id": "INSIGHT-F5BACB9D",
+            "isDfuMode": false,
+            "isVirtual": true,
+            "settings": {
+                "eegRate": 128,
+                "eegRes": 14,
+                "memsRate": 64,
+                "memsRes": 14,
+                "mode": "INSIGHT"
+            },
+            "status": "connected",
+            "virtualHeadsetId": "f5bacb9d-502b-461a-9478-105770bbeb3c"
+        },
+        "owner": "chloebeaudreau",
+        "started": "2021-05-02T10:33:52.311-05:00",
+        "status": "activated"
+    },
+    "eeg": [],
+    "cognitive": [
+        {
+            "engagement": 0.43411,
+            "excitement": 0.433617,
+            "excitementLast1Min": 0,
+            "stress": 0.460702,
+            "relaxation": 0.409955,
+            "interest": 0.449047,
+            "focus": 0.496027,
+            "ts": 1619667748.5476
+        }
+    ],
+    "facial": [],
+    "motion": []
+}
