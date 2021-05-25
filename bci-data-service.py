@@ -5,6 +5,7 @@ import datetime
 import uuid
 import time
 import sys
+# import pdb; pdb.set_trace()
 
 with open('./cortex_creds') as creds_file:
 	user = json.load(creds_file)
